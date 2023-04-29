@@ -85,7 +85,7 @@ def check_response(response):
         if key not in response:
             logger.error(f'В ответе API нет ключа {key}')
             raise KeyError(f'В ответе API нет ключа {key}')
-    homework, *_ = response.get('homeworks')
+    homework = response.get('homeworks')
     if not isinstance(response.get('homeworks'), list):
         raise TypeError(f'Ответ API не список. Передан {type(homework)}.')
     return homework
@@ -116,7 +116,7 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp_now)
-            homework = check_response(response)
+            homework, *_ = check_response(response)
             if parse_status(homework) != status:
                 status = parse_status(homework)
                 send_message(bot, status)
