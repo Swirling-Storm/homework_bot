@@ -15,6 +15,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
+SPRINT_PERIOD = 1209600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -109,7 +110,7 @@ def main():
         logger.critical('Отсутствуют обязательные переменные окружения')
         exit()
     bot = Bot(token=TELEGRAM_TOKEN)
-    timestamp_now = int(time.time() - 2629743)
+    timestamp_now = int(time.time() - SPRINT_PERIOD)
     previous_status = None
 
     while True:
