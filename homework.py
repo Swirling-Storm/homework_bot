@@ -14,7 +14,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 600
+RETRY_PERIOD = 6
 SPRINT_PERIOD = 1209600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
@@ -85,23 +85,24 @@ def check_response(response):
         if key not in response:
             logger.error(f'В ответе API нет ключа {key}')
             raise KeyError(f'В ответе API нет ключа {key}')
-    homework = response.get('homeworks')
+    homework, *_ = response.get('homeworks')
     if not isinstance(response.get('homeworks'), list):
         raise TypeError(f'Ответ API не список. Передан {type(homework)}.')
+    return homework
 
 
 def parse_status(homework):
     """Извлечение ответа API."""
     logger.info('Извлечение статуса конкретной домашней работы.')
-    homework_name, *_ = homework.get('homeworks')
-    homework_status, *_ = homework.get('status')
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
+    verdict = HOMEWORK_VERDICTS.get(homework_status)
     if not homework_name:
         logger.error(f'Отсутствует поле: {homework_name}')
         raise KeyError(f'Отсутствует поле: {homework_name}')
     if homework_status not in HOMEWORK_VERDICTS:
         logger.error(f'Неожиданный статус: {homework_status}.')
         raise KeyError(f'Неожиданный статус: {homework_status}.')
-    verdict = HOMEWORK_VERDICTS.get(homework_status)
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
