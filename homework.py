@@ -6,7 +6,7 @@ import requests
 from dotenv import load_dotenv
 from telegram import Bot
 from logging.handlers import RotatingFileHandler
-from exceptions import SendMessageError, GetApiAnswerError
+from exceptions import GetApiAnswerError
 
 load_dotenv()
 
@@ -39,19 +39,21 @@ handler.setFormatter(formatter)
 def check_tokens():
     """Проверка доступности переменных окружения."""
     logger.info('Проверка передаваемых переменных.')
-    return all([TELEGRAM_TOKEN, PRACTICUM_TOKEN, TELEGRAM_CHAT_ID])
+    tokens = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+    }
+    for token_key, token_value in tokens.items():
+        if not token_value:
+            logger.critical(f'Отсутствует переменная: {token_key}.')
+            exit()
 
 
 def send_message(bot, message):
     """Отправка сообщения в Телеграм чат."""
-    try:
-        bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.debug('Отправка сообщения в Telegram')
-    except Exception as error:
-        logger.error('Сбой при отправке сообщения в Telegram!')
-        raise SendMessageError(error)
-    else:
-        logger.info('Удачная отправка сообщения в Telegram')
+    bot.send_message(TELEGRAM_CHAT_ID, message)
+    logger.debug('Отправка сообщения в Telegram')
 
 
 def get_api_answer(timestamp_now):
@@ -64,12 +66,12 @@ def get_api_answer(timestamp_now):
                                 headers=HEADERS,
                                 params=payload
                                 )
-        if response.status_code != 200:
-            logger.error('Эндпоинт недоступен')
-            raise GetApiAnswerError('Эндппоинт недоступен')
     except Exception as error:
         logger.error('Ошибка при запросе к API')
         raise GetApiAnswerError(error)
+    if response.status_code != 200:
+        logger.error('Эндпоинт недоступен')
+        raise GetApiAnswerError('Эндппоинт недоступен')
     return response.json()
 
 
@@ -86,17 +88,16 @@ def check_response(response):
     homework = response.get('homeworks')
     if not isinstance(response.get('homeworks'), list):
         raise TypeError(f'Ответ API не список. Передан {type(homework)}.')
-    return homework[0]
 
 
 def parse_status(homework):
     """Извлечение ответа API."""
     logger.info('Извлечение статуса конкретной домашней работы.')
-    homework_name = homework.get('homework_name')
+    homework_name, *_ = homework.get('homeworks')
+    homework_status, *_ = homework.get('status')
     if not homework_name:
         logger.error(f'Отсутствует поле: {homework_name}')
         raise KeyError(f'Отсутствует поле: {homework_name}')
-    homework_status = homework.get('status')
     if homework_status not in HOMEWORK_VERDICTS:
         logger.error(f'Неожиданный статус: {homework_status}.')
         raise KeyError(f'Неожиданный статус: {homework_status}.')
@@ -106,21 +107,18 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    if check_tokens() is False:
-        logger.critical('Отсутствуют обязательные переменные окружения')
-        exit()
+    check_tokens()
     bot = Bot(token=TELEGRAM_TOKEN)
     timestamp_now = int(time.time() - SPRINT_PERIOD)
-    previous_status = None
+    status = None
 
     while True:
         try:
             response = get_api_answer(timestamp_now)
             homework = check_response(response)
-            if parse_status(homework) != previous_status:
-                new_status = parse_status(homework)
-                send_message(bot, new_status)
-                previous_status = new_status
+            if parse_status(homework) != status:
+                status = parse_status(homework)
+                send_message(bot, status)
             else:
                 logger.debug('Статус не изменился!')
         except Exception as error:
