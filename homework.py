@@ -48,6 +48,12 @@ def check_tokens():
     for token_key, token_value in tokens.items():
         if not token_value:
             logger.critical(f'Отсутствует переменная: {token_key}.')
+        else:
+            logger.info(f'С токеном {token_key} все ОК.')
+    for token_key, token_value in tokens.items():
+        if not token_value:
+            logger.critical('Экстренный выход!!!')
+            exit(1)
 
 
 def send_message(bot, message):
@@ -123,6 +129,7 @@ def main():
             if parse_status(homework) != status:
                 logger.debug('Изменение прошлого статуса!')
                 status = parse_status(homework)
+                timestamp_now = int(time.time() - SPRINT_PERIOD)
                 try:
                     send_message(bot, status)
                 except TelegramError:
