@@ -1,11 +1,12 @@
 import logging
 import os
 import time
+from logging.handlers import RotatingFileHandler
 
 import requests
 from dotenv import load_dotenv
-from telegram import Bot
-from logging.handlers import RotatingFileHandler
+from telegram import Bot, TelegramError
+
 from exceptions import GetApiAnswerError
 
 load_dotenv()
@@ -27,7 +28,7 @@ HOMEWORK_VERDICTS = {
 }
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = RotatingFileHandler('main.log', encoding='utf-8')
 logger.addHandler(handler)
 formatter = logging.Formatter(
@@ -47,7 +48,6 @@ def check_tokens():
     for token_key, token_value in tokens.items():
         if not token_value:
             logger.critical(f'Отсутствует переменная: {token_key}.')
-            exit()
 
 
 def send_message(bot, message):
@@ -85,10 +85,9 @@ def check_response(response):
         if key not in response:
             logger.error(f'В ответе API нет ключа {key}')
             raise KeyError(f'В ответе API нет ключа {key}')
-    homework, *_ = response.get('homeworks')
-    if not isinstance(response.get('homeworks'), list):
-        raise TypeError(f'Ответ API не список. Передан {type(homework)}.')
-    return homework
+    if not isinstance(response['homeworks'], list):
+        raise TypeError('Ответ API не список.'
+                        f'Передан {type(response["homeworks"])}.')
 
 
 def parse_status(homework):
@@ -108,7 +107,9 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
+    logger.info('Запуск бота.')
     check_tokens()
+
     bot = Bot(token=TELEGRAM_TOKEN)
     timestamp_now = int(time.time() - SPRINT_PERIOD)
     status = None
@@ -116,14 +117,18 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp_now)
-            homework = check_response(response)
+            check_response(response)
+            homework, *_ = response.get('homeworks')
             if parse_status(homework) != status:
                 status = parse_status(homework)
-                send_message(bot, status)
+                try:
+                    send_message(bot, status)
+                except TelegramError:
+                    logger.error('Ошибка отправки сообщения!')
             else:
                 logger.debug('Статус не изменился!')
-        except Exception as error:
-            logger.error(f'Сбой в программе: {error}')
+        except Exception:
+            logger.exception('Сбой в программе:')
         finally:
             time.sleep(RETRY_PERIOD)
 
