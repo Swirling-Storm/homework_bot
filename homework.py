@@ -113,7 +113,6 @@ def main():
         exit(1)
     bot = Bot(token=TELEGRAM_TOKEN)
     timestamp_now = int(time.time() - SPRINT_PERIOD)
-    status = None
 
     while True:
         try:
@@ -128,7 +127,7 @@ def main():
                     send_message(bot, status)
                 except TelegramError:
                     logger.error('Ошибка отправки сообщения!')
-                timestamp_now = int(time.time())
+            timestamp_now = int(time.time())
         except Exception:
             logger.exception('Сбой в программе:')
         finally:
