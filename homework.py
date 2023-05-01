@@ -28,7 +28,7 @@ HOMEWORK_VERDICTS = {
 }
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 handler = RotatingFileHandler('main.log', encoding='utf-8')
 logger.addHandler(handler)
 formatter = logging.Formatter(
@@ -52,8 +52,9 @@ def check_tokens():
 
 def send_message(bot, message):
     """Отправка сообщения в Телеграм чат."""
+    logger.info('Отправка сообщения в Telegram')
     bot.send_message(TELEGRAM_CHAT_ID, message)
-    logger.debug('Отправка сообщения в Telegram')
+    logger.debug('Сообщение отправилось в Telegram!')
 
 
 def get_api_answer(timestamp_now):
@@ -92,7 +93,6 @@ def check_response(response):
 
 def parse_status(homework):
     """Извлечение ответа API."""
-    logger.info('Извлечение статуса конкретной домашней работы.')
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     verdict = HOMEWORK_VERDICTS.get(homework_status)
@@ -119,7 +119,9 @@ def main():
             response = get_api_answer(timestamp_now)
             check_response(response)
             homework, *_ = response.get('homeworks')
+            logger.info('Проверка прошлого статуса!')
             if parse_status(homework) != status:
+                logger.debug('Изменение прошлого статуса!')
                 status = parse_status(homework)
                 try:
                     send_message(bot, status)
