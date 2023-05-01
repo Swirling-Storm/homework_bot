@@ -48,12 +48,7 @@ def check_tokens():
     for token_key, token_value in tokens.items():
         if not token_value:
             logger.critical(f'Отсутствует переменная: {token_key}.')
-        else:
-            logger.info(f'С токеном {token_key} все ОК.')
-    for token_key, token_value in tokens.items():
-        if not token_value:
-            logger.critical('Экстренный выход!!!')
-            exit(1)
+    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
 def send_message(bot, message):
@@ -114,8 +109,8 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     logger.info('Запуск бота.')
-    check_tokens()
-
+    if not check_tokens():
+        exit(1)
     bot = Bot(token=TELEGRAM_TOKEN)
     timestamp_now = int(time.time() - SPRINT_PERIOD)
     status = None
@@ -124,18 +119,16 @@ def main():
         try:
             response = get_api_answer(timestamp_now)
             check_response(response)
-            homework, *_ = response.get('homeworks')
-            logger.info('Проверка прошлого статуса!')
-            if parse_status(homework) != status:
-                logger.debug('Изменение прошлого статуса!')
+            if response.get('homeworks') == []:
+                logger.debug('Ничего нового...')
+            else:
+                homework, *_ = response.get('homeworks')
                 status = parse_status(homework)
-                timestamp_now = int(time.time() - SPRINT_PERIOD)
                 try:
                     send_message(bot, status)
                 except TelegramError:
                     logger.error('Ошибка отправки сообщения!')
-            else:
-                logger.debug('Статус не изменился!')
+                timestamp_now = int(time.time())
         except Exception:
             logger.exception('Сбой в программе:')
         finally:
