@@ -45,10 +45,13 @@ def check_tokens():
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
+    miss = False
     for token_key, token_value in tokens.items():
         if not token_value:
-            logger.critical(f'Отсутствует переменная: {token_key}.')
-    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
+            logger.critical(f'Не хватает переменной: {token_key}.')
+            miss = True
+    if miss is True:
+        exit(1)
 
 
 def send_message(bot, message):
@@ -109,8 +112,9 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     logger.info('Запуск бота.')
-    if not check_tokens():
-        exit(1)
+
+    check_tokens()
+
     bot = Bot(token=TELEGRAM_TOKEN)
     timestamp_now = int(time.time() - SPRINT_PERIOD)
 
