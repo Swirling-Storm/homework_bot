@@ -50,7 +50,7 @@ def check_tokens():
         if not token_value:
             logger.critical(f'Не хватает переменной: {token_key}.')
             miss = True
-    if miss is True:
+    if miss:
         exit(1)
 
 
